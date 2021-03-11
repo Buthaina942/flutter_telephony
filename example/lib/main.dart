@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_telephony/flutter_telephony.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() => runApp(MyApp());
 
@@ -22,8 +23,19 @@ class _MyAppState extends State<MyApp> {
   Future<void> getFlutterTelephony() async {
     FlutterTelephony info;
     try {
-      info = await FlutterTelephonyInfo.get;
-    } on PlatformException {}
+      if (await Permission.location.request().isGranted &&
+          await Permission.phone.request().isGranted) {
+        // Either the permission was already granted before or the user just granted it.
+        info = await FlutterTelephonyInfo.get;
+      } else {
+        Map<Permission, PermissionStatus> statuses = await [
+          Permission.location,
+          Permission.phone,
+        ].request();
+      }
+    } on PlatformException catch (e) {
+      print(e.toString());
+    }
 
     if (!mounted) return;
 
@@ -42,7 +54,7 @@ class _MyAppState extends State<MyApp> {
         body: ListView(
           children: [
             Center(
-              child: Text(_info.toString()),
+              child: Text(_info.rawString()),
             ),
           ],
         ),
