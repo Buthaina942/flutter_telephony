@@ -3,22 +3,15 @@ package me.AliAzim.flutter_telephony
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
+import android.telephony.*
+import android.telephony.gsm.GsmCellLocation
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker.PERMISSION_GRANTED
-import android.telephony.TelephonyManager
-import android.util.Log
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.Registrar
-import me.AliAzim.flutter_telephony.model.request.Cell
-import me.AliAzim.flutter_telephony.model.request.CellInfo
 import me.AliAzim.flutter_telephony.model.request.RadioType
-import android.telephony.CellInfoGsm
-import android.telephony.CellInfoLte
-import android.telephony.CellInfoWcdma
-import android.telephony.gsm.GsmCellLocation
 
 val cellInfo = mutableListOf<String>();
 val cellLocation = mutableListOf<String>();
@@ -45,6 +38,7 @@ class FltFlutterTelephonyPlugin(var registrar: Registrar) : MethodCallHandler {
 //            }
 
             val resultMap = HashMap<String, Any?>()
+            var cdma = HashMap<String, Any?>()
 
 
 //            resultMap["callState"] = telephonyManager.callState
@@ -249,24 +243,30 @@ class FltFlutterTelephonyPlugin(var registrar: Registrar) : MethodCallHandler {
                     ContextCompat.checkSelfPermission(registrar.activeContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) == PERMISSION_GRANTED
                     && Build.VERSION.SDK_INT >= 17
             ) {
-                val allCellInfo = telephonyManager.allCellInfo
-//                List<CellInfo> cf ;
+                //                List<CellInfo> cf ;
                 cellInfo.clear()
-                if(allCellInfo !=null)
-                allCellInfo.forEach{
+                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                    telephonyManager.allCellInfo
+                } else {
+                    TODO("VERSION.SDK_INT < JELLY_BEAN_MR1")
+                })?.forEach {
                     when (it) {
                         is CellInfoGsm -> getCellInfo(it)
                         is CellInfoWcdma -> getCellInfo(it)
                         is CellInfoLte -> getCellInfo(it)
+                        is CellInfoCdma -> {
+                            cdma = getCdma(it);
+                        }
                         else -> null
                     }
                 }
 //                println(telephonyManager.allCellInfo[0])
-            if(cellInfo.count() != 0)
-                resultMap["allCellInfo"] = cellInfo
+                if (cellInfo.count() != 0)
+                    resultMap["allCellInfo"] = cellInfo
+                resultMap["cdma"] = cdma
             }
 
-            if(cellInfo.count() == 0)
+            if (cellInfo.count() == 0)
                 if (ContextCompat.checkSelfPermission(registrar.activeContext(), android.Manifest.permission.READ_PHONE_STATE) == PERMISSION_GRANTED ||
                         ContextCompat.checkSelfPermission(registrar.activeContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) == PERMISSION_GRANTED
 //                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
@@ -284,8 +284,8 @@ class FltFlutterTelephonyPlugin(var registrar: Registrar) : MethodCallHandler {
                     cellInfo.add(allCellLocation.lac.toString())
                     cellInfo.add(allCellLocation.cid.toString())
                     cellInfo.add(allCellLocation.psc.toString())
-                    if(allCellLocation.cid > 50 && allCellLocation.cid != 2147483647)
-                    resultMap["allCellInfo"] = cellInfo
+                    if (allCellLocation.cid > 50 && allCellLocation.cid != 2147483647)
+                        resultMap["allCellInfo"] = cellInfo
                 }
 
 
@@ -309,8 +309,6 @@ class FltFlutterTelephonyPlugin(var registrar: Registrar) : MethodCallHandler {
 //            }
 
 
-
-
             result.success(resultMap)
         } else {
             result.notImplemented()
@@ -319,23 +317,48 @@ class FltFlutterTelephonyPlugin(var registrar: Registrar) : MethodCallHandler {
 }
 
 
+fun getCdma(info: CellInfoCdma): HashMap<String, Any?> {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {
+        var cdma = HashMap<String, Any?>()
+
+        cdma["cdmaDbm"] = info.cellSignalStrength.cdmaDbm;
+        cdma["cdmaEcio"] = info.cellSignalStrength.cdmaEcio;
+        cdma["cdmaLevel"] = info.cellSignalStrength.cdmaLevel;
+        cdma["evdoDbm"] = info.cellSignalStrength.evdoDbm;
+        cdma["evdoEcio"] = info.cellSignalStrength.evdoEcio;
+        cdma["evdoLevel"] = info.cellSignalStrength.evdoLevel;
+        cdma["evdoSnr"] = info.cellSignalStrength.evdoSnr;
+        cdma["dbm"] = info.cellSignalStrength.dbm;
+        cdma["asuLevel"] = info.cellSignalStrength.asuLevel;
+        cdma["level"] = info.cellSignalStrength.level;
+
+
+        return cdma;
+    } else {
+        return null;
+    }
+
+}
+
 fun getCellInfo(info: CellInfoGsm): MutableList<String> {
-    info.cellIdentity.let {
-        val (mcc, mnc) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            Pair(it.mccString?.toInt() ?: 0, it.mncString?.toInt() ?: 0)
-        } else {
-            Pair(it.mcc, it.mnc)
-        }
-//        cellInfo.mcc = mcc
-//        cellInfo.mnc = mnc
-//        cellInfo.cells = listOf(Cell(it.lac, it.cid, it.psc))
-        if (mcc!=0 && mnc!=0 && it.lac != 0 && it.cid > 50 && it.cid != 2147483647){
-            cellInfo.add(RadioType.GSM)
-            cellInfo.add(mcc.toString())
-            cellInfo.add(mnc.toString())
-            cellInfo.add(it.lac.toString())
-            cellInfo.add(it.cid.toString())
-            cellInfo.add(it.psc.toString())
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
+        info.cellIdentity.let {
+            val (mcc, mnc) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                Pair(it.mccString?.toInt() ?: 0, it.mncString?.toInt() ?: 0)
+            } else {
+                Pair(it.mcc, it.mnc)
+            }
+            //        cellInfo.mcc = mcc
+            //        cellInfo.mnc = mnc
+            //        cellInfo.cells = listOf(Cell(it.lac, it.cid, it.psc))
+            if (mcc != 0 && mnc != 0 && it.lac != 0 && it.cid > 50 && it.cid != 2147483647) {
+                cellInfo.add(RadioType.GSM)
+                cellInfo.add(mcc.toString())
+                cellInfo.add(mnc.toString())
+                cellInfo.add(it.lac.toString())
+                cellInfo.add(it.cid.toString())
+                cellInfo.add(it.psc.toString())
+            }
         }
     }
 
@@ -344,22 +367,24 @@ fun getCellInfo(info: CellInfoGsm): MutableList<String> {
 
 fun getCellInfo(info: CellInfoWcdma): MutableList<String> {
 
-    info.cellIdentity.let {
-        val (mcc, mnc) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            Pair(it.mccString?.toInt() ?: 0, it.mncString?.toInt() ?: 0)
-        } else {
-            Pair(it.mcc, it.mnc)
-        }
-//        cellInfo.mcc = mcc
-//        cellInfo.mnc = mnc
-//        cellInfo.cells = listOf(Cell(it.lac, it.cid, it.psc))
-        if (mcc!=0 && mnc!=0 && it.lac != 0 && it.cid > 50 && it.cid != 2147483647){
-            cellInfo.add(RadioType.CDMA)
-            cellInfo.add(mcc.toString())
-            cellInfo.add(mnc.toString())
-            cellInfo.add(it.lac.toString())
-            cellInfo.add(it.cid.toString())
-            cellInfo.add(it.psc.toString())
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
+        info.cellIdentity.let {
+            val (mcc, mnc) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                Pair(it.mccString?.toInt() ?: 0, it.mncString?.toInt() ?: 0)
+            } else {
+                Pair(it.mcc, it.mnc)
+            }
+            //        cellInfo.mcc = mcc
+            //        cellInfo.mnc = mnc
+            //        cellInfo.cells = listOf(Cell(it.lac, it.cid, it.psc))
+            if (mcc != 0 && mnc != 0 && it.lac != 0 && it.cid > 50 && it.cid != 2147483647) {
+                cellInfo.add(RadioType.CDMA)
+                cellInfo.add(mcc.toString())
+                cellInfo.add(mnc.toString())
+                cellInfo.add(it.lac.toString())
+                cellInfo.add(it.cid.toString())
+                cellInfo.add(it.psc.toString())
+            }
         }
     }
 
@@ -367,21 +392,23 @@ fun getCellInfo(info: CellInfoWcdma): MutableList<String> {
     return cellInfo
 }
 
-fun getCellInfo(info: CellInfoLte):MutableList<String>{
-    info.cellIdentity.let {
-        val (mcc, mnc) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            Pair(it.mccString?.toInt() ?: 0, it.mncString?.toInt() ?: 0)
-        } else {
-            Pair(it.mcc, it.mnc)
-        }
+fun getCellInfo(info: CellInfoLte): MutableList<String> {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
+        info.cellIdentity.let {
+            val (mcc, mnc) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                Pair(it.mccString?.toInt() ?: 0, it.mncString?.toInt() ?: 0)
+            } else {
+                Pair(it.mcc, it.mnc)
+            }
 
-        if (mcc!=0 && mnc!=0 && it.tac != 0 && it.ci > 50 && it.ci != 2147483647){
-            cellInfo.add(RadioType.LTE)
-            cellInfo.add(mcc.toString())
-            cellInfo.add(mnc.toString())
-            cellInfo.add(it.tac.toString())
-            cellInfo.add(it.ci.toString())
-            cellInfo.add(it.pci.toString())
+            if (mcc != 0 && mnc != 0 && it.tac != 0 && it.ci > 50 && it.ci != 2147483647) {
+                cellInfo.add(RadioType.LTE)
+                cellInfo.add(mcc.toString())
+                cellInfo.add(mnc.toString())
+                cellInfo.add(it.tac.toString())
+                cellInfo.add(it.ci.toString())
+                cellInfo.add(it.pci.toString())
+            }
         }
     }
     print(cellInfo)

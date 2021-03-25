@@ -108,35 +108,35 @@ class PhoneType {
 }
 
 class FlutterTelephony {
-  FlutterTelephony._({
-    this.callState,
-    this.dataNetworkType,
-    this.deviceSoftwareVersion,
-    this.imei,
-    this.isDataEnabled,
-    this.isNetworkRoaming,
-    this.isSmsCapable,
-    this.isVoiceCapable,
-    this.line1Number,
-    this.meid,
-    this.nai,
-    this.networkCountryIso,
-    this.networkOperator,
-    this.networkSpecifier,
-    this.networkType,
-    this.networkOperatorName,
-    this.phoneCount,
-    this.phoneType,
-    this.serviceState,
-    this.simCarrierId,
-    this.simCarrierIdName,
-    this.simCountryIso,
-    this.simOperator,
-    this.simOperatorName,
-    this.simSerialNumber,
-    this.cellInfo,
-    this.cellLocation,
-  });
+  FlutterTelephony._(
+      {this.callState,
+      this.dataNetworkType,
+      this.deviceSoftwareVersion,
+      this.imei,
+      this.isDataEnabled,
+      this.isNetworkRoaming,
+      this.isSmsCapable,
+      this.isVoiceCapable,
+      this.line1Number,
+      this.meid,
+      this.nai,
+      this.networkCountryIso,
+      this.networkOperator,
+      this.networkSpecifier,
+      this.networkType,
+      this.networkOperatorName,
+      this.phoneCount,
+      this.phoneType,
+      this.serviceState,
+      this.simCarrierId,
+      this.simCarrierIdName,
+      this.simCountryIso,
+      this.simOperator,
+      this.simOperatorName,
+      this.simSerialNumber,
+      this.cellInfo,
+      this.cellLocation,
+      this.cdma});
 
   ///当前电话状态
   ///返回值参考：[CallState]
@@ -214,6 +214,7 @@ class FlutterTelephony {
 
   //CELL INFO
   List<CellInfo> cellInfo;
+  Map<dynamic, dynamic> cdma;
 
   // //Cell Location
 
@@ -223,34 +224,35 @@ class FlutterTelephony {
 
   static FlutterTelephony fromMap(Map<String, dynamic> map) {
     _map = map;
+    print(map['cdma']);
     return FlutterTelephony._(
-      callState: map["callState"],
-      dataNetworkType: map["dataNetworkType"],
-      deviceSoftwareVersion: map["deviceSoftwareVersion"],
-      imei: map["imei"],
-      isDataEnabled: map["isDataEnabled"],
-      isSmsCapable: map["isSmsCapable"],
-      isVoiceCapable: map["isVoiceCapable"],
-      line1Number: map["line1Number"],
-      meid: map["meid"],
-      nai: map["nai"],
-      networkCountryIso: map["networkCountryIso"],
-      networkOperator: map["networkOperator"],
-      networkSpecifier: map["networkSpecifier"],
-      networkType: map["networkType"],
-      networkOperatorName: map["networkOperatorName"],
-      phoneCount: map["phoneCount"],
-      phoneType: map["phoneType"],
-      serviceState: map["serviceState"],
-      simCarrierId: map["simCarrierId"],
-      simCarrierIdName: map["simCarrierIdName"],
-      simCountryIso: map["simCountryIso"],
-      simOperator: map["simOperator"],
-      simOperatorName: map["simOperatorName"],
-      simSerialNumber: map["simSerialNumber"],
-      cellInfo: CellInfo.fromList(map["allCellInfo"]) ?? null,
-      cellLocation: CellInfo.fromList(map["cellLocation"]) ?? null,
-    );
+        callState: map["callState"],
+        dataNetworkType: map["dataNetworkType"],
+        deviceSoftwareVersion: map["deviceSoftwareVersion"],
+        imei: map["imei"],
+        isDataEnabled: map["isDataEnabled"],
+        isSmsCapable: map["isSmsCapable"],
+        isVoiceCapable: map["isVoiceCapable"],
+        line1Number: map["line1Number"],
+        meid: map["meid"],
+        nai: map["nai"],
+        networkCountryIso: map["networkCountryIso"],
+        networkOperator: map["networkOperator"],
+        networkSpecifier: map["networkSpecifier"],
+        networkType: map["networkType"],
+        networkOperatorName: map["networkOperatorName"],
+        phoneCount: map["phoneCount"],
+        phoneType: map["phoneType"],
+        serviceState: map["serviceState"],
+        simCarrierId: map["simCarrierId"],
+        simCarrierIdName: map["simCarrierIdName"],
+        simCountryIso: map["simCountryIso"],
+        simOperator: map["simOperator"],
+        simOperatorName: map["simOperatorName"],
+        simSerialNumber: map["simSerialNumber"],
+        cellInfo: CellInfo.fromList(map["allCellInfo"]),
+        cellLocation: CellInfo.fromList(map["cellLocation"]),
+        cdma: map['cdma']);
   }
 
   String rawString() {
